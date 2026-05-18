@@ -4,7 +4,8 @@ from datetime import datetime
 import pytz
 import json
 import os
-from config import CREDEDENTIALS_FILE, SPREADSHEET_ID, INVESTMENT_CATEGORY
+import logging
+from config import CREDENTIALS_FILE, SPREADSHEET_ID, INVESTMENT_CATEGORY, MONTHLY_GOAL
 
 BRAZIL_TZ = pytz.timezone("America/Sao_Paulo")
 # Permissons 
@@ -89,3 +90,45 @@ def get_monthly_goal() -> float:
         logging.warning(f"Erro ao ler meta da planilha: {e}. Usando valor padrão.")
 
     return MONTHLY_GOAL
+
+def get_summary() -> dict:
+    """Retorna um dicionário com o resumo do mês atual."""
+    worksheet = get_worksheet()
+    records = worksheet.get_all_records()
+
+    meta = get_monthly_goal()
+    categorias = {}
+    total_gastos = 0.0
+    total_investimentos = 0.0
+
+    for row in records:
+        valor = float(row["Valor"])
+        categoria = row["Categoria"]
+        tipo = row["Tipo"]
+
+        if tipo == "Gasto":
+            total_gastos += valor
+            categorias[categoria] = categorias.get(categoria, 0) + valor
+        elif tipo == "Investimento":
+            total_investimentos += valor
+
+    # Ordena categorias por valor
+    ranking = sorted(categorias.items(), key=lambda x: x[1], reverse=True)
+    ranking_texto = "\n".join(
+        f"  {i+1}. {cat}: R$ {val:.2f}"
+        for i, (cat, val) in enumerate(ranking[:5])  # top 5
+    )
+
+    percentual = (total_gastos / meta * 100) if meta > 0 else 0
+    saldo = meta - total_gastos
+    mes = datetime.now(BRAZIL_TZ).strftime("%Y-%m")
+
+    return {
+        "mes": mes,
+        "meta": meta,
+        "total_gastos": total_gastos,
+        "total_investimentos": total_investimentos,
+        "saldo": saldo,
+        "percentual": percentual,
+        "ranking": ranking_texto if ranking_texto else "Nenhum gasto registrado ainda."
+    }

@@ -1,9 +1,9 @@
 from aiogram import Router
 from aiogram.types import Message
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 
 from filters import IsAllowedUser
-from sheet import save_expense, get_monthly_expenses, get_monthly_goal
+from sheet import save_expense, get_monthly_expenses, get_monthly_goal, get_summary
 from config import MONTHLY_GOAL, INVESTMENT_CATEGORY
 
 router = Router()
@@ -21,6 +21,22 @@ async def handle_start(message: Message) -> None:
         "`200 Mercado`\n"
         "`1000 Investimentos`\n\n"
         f"🎯 *Meta mensal:* R$ {MONTHLY_GOAL:.2f}",
+        parse_mode="Markdown"
+    )
+
+@router.message(Command("resumo"), IsAllowedUser())
+async def handle_resumo(message: Message) -> None:
+    """Retorna um resumo dos gastos do mês atual."""
+    summary = get_summary()
+
+    await message.answer(
+        f"📊 *Resumo de {summary['mes']}*\n\n"
+        f"🎯 *Meta do mês:* R$ {summary['meta']:.2f}\n"
+        f"💸 *Total gasto:* R$ {summary['total_gastos']:.2f}\n"
+        f"💰 *Saldo restante:* R$ {summary['saldo']:.2f}\n"
+        f"📈 *% utilizado:* {summary['percentual']:.1f}%\n\n"
+        f"📥 *Total investido:* R$ {summary['total_investimentos']:.2f}\n\n"
+        f"🏆 *Top categorias:*\n{summary['ranking']}",
         parse_mode="Markdown"
     )
 
