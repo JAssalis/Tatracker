@@ -3,7 +3,7 @@ from aiogram.types import Message
 from aiogram.filters import CommandStart
 
 from filters import IsAllowedUser
-from sheet import save_expense, get_monthly_expenses
+from sheet import save_expense, get_monthly_expenses, get_monthly_goal
 from config import MONTHLY_GOAL, INVESTMENT_CATEGORY
 
 router = Router()
@@ -72,7 +72,8 @@ async def handle_expense(message: Message) -> None:
         )
     else:
         total_spent = get_monthly_expenses()
-        percentage = (total_spent / MONTHLY_GOAL) * 100
+        goal = get_monthly_goal()
+        percentage = (total_spent / goal) * 100
         if percentage < 70:
             emoji = "🟢"
         elif percentage < 90:
@@ -85,6 +86,6 @@ async def handle_expense(message: Message) -> None:
             f"Valor: R$ {value:.2f}\n"
             f"Categoria: {category}\n\n"
             f"*Meta do mês:* {percentage:.1f}% utilizado\n"
-            f"📊 R$ {total_spent:.2f} de R$ {MONTHLY_GOAL:.2f}",
+            f"📊 R$ {total_spent:.2f} de R$ {goal:.2f}",
             parse_mode="Markdown"
         )

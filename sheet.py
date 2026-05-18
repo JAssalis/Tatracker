@@ -65,3 +65,27 @@ def get_monthly_expenses() -> float:
     )
 
     return total
+
+def get_monthly_goal() -> float:
+    try:
+        creds_dict_str = os.getenv("GOOGLE_CREDENTIALS")
+
+        if creds_dict_str:
+            creds_dict = json.loads(creds_dict_str)
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPES)
+        else:
+            creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, SCOPES)
+
+        client = gspread.authorize(creds)
+        spreadsheet = client.open_by_key(SPREADSHEET_ID)
+        config_sheet = spreadsheet.worksheet("config")
+        records = config_sheet.get_all_records()
+
+        for row in records:
+            if str(row["Chave"]).lower() == "monthly_goal":
+                return float(row["Valor"])
+
+    except Exception as e:
+        logging.warning(f"Erro ao ler meta da planilha: {e}. Usando valor padrão.")
+
+    return MONTHLY_GOAL
