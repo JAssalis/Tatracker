@@ -2,6 +2,8 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import pytz
+import json
+import os
 from config import CREDEDENTIALS_FILE, SPREADSHEET_ID, INVESTMENT_CATEGORY
 
 BRAZIL_TZ = pytz.timezone("America/Sao_Paulo")
@@ -14,10 +16,19 @@ SCOPES = [
 
 # Creating the worksheet
 def get_worksheet():
-    creds = ServiceAccountCredentials.from_json_keyfile_name(CREDEDENTIALS_FILE, SCOPES)
+    google_credentials = os.getenv("GOOGLE_CREDENTIALS")
+
+    if google_credentials:
+        # Railway — lê as credenciais da variável de ambiente
+        creds_dict = json.loads(google_credentials)
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPES)
+    else:
+        # Codespace — lê do arquivo local
+        creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, SCOPES)
+
     client = gspread.authorize(creds)
     spreadsheet = client.open_by_key(SPREADSHEET_ID)
-    sheet_name = datetime.now().strftime("%Y-%m")
+    sheet_name = datetime.now(BRAZIL_TZ).strftime("%Y-%m")
 
     try:
         worksheet = spreadsheet.worksheet(sheet_name)
