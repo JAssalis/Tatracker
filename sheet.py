@@ -92,7 +92,6 @@ def get_monthly_goal() -> float:
     return MONTHLY_GOAL
 
 def get_summary() -> dict:
-    """Retorna um dicionário com o resumo do mês atual."""
     worksheet = get_worksheet()
     records = worksheet.get_all_records()
 
@@ -134,7 +133,6 @@ def get_summary() -> dict:
     }
 
 def get_known_categories() -> list[str]:
-    """Retorna lista de categorias já usadas na planilha do mês atual."""
     try:
         worksheet = get_worksheet()
         records = worksheet.get_all_records()
@@ -142,3 +140,44 @@ def get_known_categories() -> list[str]:
         return categories
     except Exception:
         return []
+
+
+def save_installments(value: float, category: str, installments: int) -> list[str]:
+    from dateutil.relativedelta import relativedelta
+
+    installment_value = round(value / installments, 2)
+    months_recorded = []
+
+    google_credentials = os.getenv("GOOGLE_CREDENTIALS")
+    if google_credentials:
+        creds_dict = json.loads(google_credentials)
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPES)
+    else:
+        creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, SCOPES)
+
+    client = gspread.authorize(creds)
+    spreadsheet = client.open_by_key(SPREADSHEET_ID)
+
+    now = datetime.now(BRAZIL_TZ)
+
+    for i in range(installments):
+        target_date = now + relativedelta(months=i)
+        sheet_name = target_date.strftime("%Y-%m")
+
+        try:
+            worksheet = spreadsheet.worksheet(sheet_name)
+        except gspread.exceptions.WorksheetNotFound:
+            worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=1000, cols=5)
+            worksheet.append_row(["Data", "Hora", "Valor", "Categoria", "Tipo"])
+
+        row = [
+            target_date.strftime("%d/%m/%Y"),
+            now.strftime("%H:%M"),
+            installment_value,
+            category,
+            "Gasto",
+        ]
+        worksheet.append_row(row)
+        months_recorded.append(sheet_name)
+
+    return months_recorded

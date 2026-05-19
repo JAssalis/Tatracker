@@ -4,7 +4,7 @@ from aiogram.filters import CommandStart, Command
 
 from filters import IsAllowedUser
 from categories import normalize_category
-from sheet import save_expense, get_monthly_expenses, get_monthly_goal, get_summary, get_known_categories
+from sheet import save_expense, get_monthly_expenses, get_monthly_goal, get_summary, get_known_categories, save_installments
 
 router = Router()
 
@@ -106,3 +106,83 @@ async def handle_expense(message: Message) -> None:
             f"📊 R$ {total_spent:.2f} de R$ {goal:.2f}",
             parse_mode="Markdown"
         )
+
+@router.message(Command("parcelar"), IsAllowedUser())
+async def handle_installment(message: Message) -> None:
+    """Registra uma compra parcelada. Formato: /parcelar 300 3 Eletrônico"""
+    if not message.text:
+        return
+
+    parts = message.text.strip().split(maxsplit=3)
+
+    if len(parts) != 4:
+        await message.answer(
+            "⚠️ Formato inválido.\n"
+            "Use: `/parcelar valor parcelas categoria`\n"
+            "Exemplo: `/parcelar 300 3 Eletrônico`",
+            parse_mode="Markdown"
+        )
+        return
+
+    try:
+        value = float(parts[1].replace(",", "."))
+    except ValueError:
+        await message.answer(
+            "⚠️ O valor precisa ser um número.\n"
+            "Exemplo: `/parcelar 300 3 Eletrônico`",
+            parse_mode="Markdown"
+        )
+        return
+
+    try:
+        installments = int(parts[2])
+        if installments < 2:
+            raise ValueError
+    except ValueError:
+        await message.answer(
+            "⚠️ O número de parcelas precisa ser um número inteiro maior que 1.\n"
+            "Exemplo: `/parcelar 300 3 Eletrônico`",
+            parse_mode="Markdown"
+        )
+        return
+
+    raw_category = parts[3].strip()
+    extra_categories = get_known_categories()
+    category, was_corrected = normalize_category(raw_category, extra_categories)
+    installment_value = round(value / installments, 2)
+
+    months = save_installments(value, category, installments)
+
+    correction_note = f"📝 _Categoria corrigida: '{raw_category}' → '{category}'_\n\n" if was_corrected else ""
+
+    months_text = "\n".join(f"  • {m}: R$ {installment_value:.2f}" for m in months)
+
+    await message.answer(
+        f"✅ *Compra parcelada registrada!*\n"
+        f"💰 Valor total: R$ {value:.2f}\n"
+        f"📂 Categoria: {category}\n"
+        f"🔢 Parcelas: {installments}x de R$ {installment_value:.2f}\n\n"
+        f"{correction_note}"
+        f"📅 *Meses registrados:*\n{months_text}",
+        parse_mode="Markdown"
+    )
+
+# Command /help
+@router.message(Command("ajuda"), IsAllowedUser())
+async def handle_ajuda(message: Message) -> None:
+    await message.answer(
+        "📖 *Como usar o bot:*\n\n"
+        "💸 *Registrar gasto:*\n"
+        "`valor categoria`\n"
+        "Exemplo: `50 Almoço`\n\n"
+        "📈 *Registrar investimento:*\n"
+        "`valor Investimentos`\n"
+        "Exemplo: `1000 Investimentos`\n\n"
+        "🔢 *Registrar parcela:*\n"
+        "`/parcelar valor parcelas categoria`\n"
+        "Exemplo: `/parcelar 300 3 Eletrônico`\n\n"
+        "📊 *Ver resumo do mês:*\n"
+        "`/resumo`\n\n"
+        f"🎯 *Meta mensal:* configurada na aba `config` da planilha",
+        parse_mode="Markdown"
+    )
