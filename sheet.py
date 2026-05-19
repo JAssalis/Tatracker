@@ -132,3 +132,13 @@ def get_summary() -> dict:
         "percentual": percentual,
         "ranking": ranking_texto if ranking_texto else "Nenhum gasto registrado ainda."
     }
+
+def get_known_categories() -> list[str]:
+    """Retorna lista de categorias já usadas na planilha do mês atual."""
+    try:
+        worksheet = get_worksheet()
+        records = worksheet.get_all_records()
+        categories = list(set(row["Categoria"] for row in records if row["Categoria"]))
+        return categories
+    except Exception:
+        return []

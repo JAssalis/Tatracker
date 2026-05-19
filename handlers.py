@@ -3,8 +3,8 @@ from aiogram.types import Message
 from aiogram.filters import CommandStart, Command
 
 from filters import IsAllowedUser
-from sheet import save_expense, get_monthly_expenses, get_monthly_goal, get_summary
-from config import MONTHLY_GOAL, INVESTMENT_CATEGORY
+from categories import normalize_category
+from sheet import save_expense, get_monthly_expenses, get_monthly_goal, get_summary, get_known_categories
 
 router = Router()
 
@@ -31,12 +31,12 @@ async def handle_resumo(message: Message) -> None:
 
     await message.answer(
         f"📊 *Resumo de {summary['mes']}*\n\n"
-        f"🎯 *Meta do mês:* R$ {summary['meta']:.2f}\n"
-        f"💸 *Total gasto:* R$ {summary['total_gastos']:.2f}\n"
-        f"💰 *Saldo restante:* R$ {summary['saldo']:.2f}\n"
-        f"📈 *% utilizado:* {summary['percentual']:.1f}%\n\n"
-        f"📥 *Total investido:* R$ {summary['total_investimentos']:.2f}\n\n"
-        f"🏆 *Top categorias:*\n{summary['ranking']}",
+        f"*Meta do mês:* R$ {summary['meta']:.2f}\n"
+        f"*Total gasto:* R$ {summary['total_gastos']:.2f}\n"
+        f"*Saldo restante:* R$ {summary['saldo']:.2f}\n"
+        f"*% utilizado:* {summary['percentual']:.1f}%\n\n"
+        f"*Total investido:* R$ {summary['total_investimentos']:.2f}\n\n"
+        f"*Onde você mais gastou:*\n{summary['ranking']}",
         parse_mode="Markdown"
     )
 
@@ -69,14 +69,13 @@ async def handle_expense(message: Message) -> None:
         )
         return
     
-    category = parts[1].strip()
-    is_investment = category.lower() in ["investimento", "investimentos"]
-    category = "Investimentos" if is_investment else category.capitalize()
+    raw_category = parts[1].strip()
+    extra_categories = get_known_categories()
+    category, was_corrected = normalize_category(raw_category, extra_categories)
+    is_investment = category == "Investimentos"
 
     # Saving on the spreadsheet
     save_expense(value, category)
-
-    is_investment = category.lower() == INVESTMENT_CATEGORY.lower()
 
     # Creating the response
     if is_investment:
@@ -96,6 +95,8 @@ async def handle_expense(message: Message) -> None:
             emoji = "🟡"
         else:
             emoji = "🔴"
+
+        correction_note = f"📝 _Categoria corrigida: '{raw_category}' → '{category}'_\n\n" if was_corrected else ""
 
         await message.answer(
             f"*Gasto registrado!*\n"
