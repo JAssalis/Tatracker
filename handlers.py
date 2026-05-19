@@ -20,7 +20,7 @@ async def handle_start(message: Message) -> None:
         "`50 Almoço`\n"
         "`200 Mercado`\n"
         "`1000 Investimentos`\n\n"
-        f"🎯 *Meta mensal:* R$ {MONTHLY_GOAL:.2f}",
+        f"🎯 *Meta mensal:* R$ {get_monthly_goal():.2f}",
         parse_mode="Markdown"
     )
 
