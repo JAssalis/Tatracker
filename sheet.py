@@ -42,12 +42,13 @@ def get_worksheet():
 def save_expense(value: float, category: str) -> None:
     worksheet = get_worksheet()
     now = datetime.now(BRAZIL_TZ)
+    logging.info(f"DEBUG categoria: '{category}' | INVESTMENT_CATEGORY: '{INVESTMENT_CATEGORY}'")
     tipo = "Investimento" if category.lower() == INVESTMENT_CATEGORY.lower() else "Gasto"
 
     row = [
         now.strftime("%d/%m/%Y"),  # Date
         now.strftime("%H:%M"),     # Hour
-        value,                     #
+        value,                     # Value earned / spend
         category.capitalize(),     # Category
         tipo,                      # Investment or spent
     ]
