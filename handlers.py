@@ -6,6 +6,8 @@ from filters import IsAllowedUser
 from categories import normalize_category
 from sheet import save_expense, get_monthly_expenses, get_monthly_goal, get_summary, get_known_categories, save_installments
 
+from investments import buy_stock, register_dividend, register_fixed_income, get_investments_summary
+
 router = Router()
 
 
@@ -142,6 +144,173 @@ async def handle_installment(message: Message) -> None:
         parse_mode="Markdown"
     )
 
+# /compra
+@router.message(Command("compra"), IsAllowedUser())
+async def handle_buy_stock(message: Message) -> None:
+    if not message.text:
+        return
+
+    parts = message.text.strip().split()
+
+    # Validating format
+    if len(parts) != 4:
+        await message.answer(
+            "⚠️ Formato inválido.\n"
+            "Use: `/compra TICKER quantidade preço`\n"
+            "Exemplo: `/compra BBAS3 3 20`",
+            parse_mode="Markdown"
+        )
+        return
+
+    ticker = parts[1].upper()
+
+    # Validating quantity
+    try:
+        quantity = int(parts[2])
+        if quantity < 1:
+            raise ValueError
+    except ValueError:
+        await message.answer("⚠️ Quantidade precisa ser um número inteiro positivo.")
+        return
+
+    # Validating price
+    try:
+        price = parse_value(parts[3])
+    except ValueError:
+        await message.answer("⚠️ Preço precisa ser um número.\nExemplo: `20` ou `19,50`")
+        return
+
+    position = buy_stock(ticker, quantity, price)
+
+    status = "📊 *Nova posição criada!*" if position["is_new"] else "📊 *Posição atualizada!*"
+
+    await message.answer(
+        f"{status}\n\n"
+        f"📌 Ticker: {position['ticker']}\n"
+        f"🔢 Quantidade: {position['quantity']} ações\n"
+        f"💰 Preço médio: R$ {position['avg_price']:.2f}\n"
+        f"💵 Total investido: R$ {position['total_invested']:.2f}",
+        parse_mode="Markdown"
+    )
+
+
+# /dividendo
+@router.message(Command("dividendo"), IsAllowedUser())
+async def handle_dividend(message: Message) -> None:
+    if not message.text:
+        return
+
+    parts = message.text.strip().split()
+
+    # Validating format
+    if len(parts) != 3:
+        await message.answer(
+            "⚠️ Formato inválido.\n"
+            "Use: `/dividendo TICKER valor_por_ação`\n"
+            "Exemplo: `/dividendo BBAS3 0,30`",
+            parse_mode="Markdown"
+        )
+        return
+
+    ticker = parts[1].upper()
+
+    # Validating value
+    try:
+        value_per_share = parse_value(parts[2])
+    except ValueError:
+        await message.answer("⚠️ Valor precisa ser um número.\nExemplo: `/dividendo BBAS3 0,30`")
+        return
+
+    result = register_dividend(ticker, value_per_share)
+
+    if not result:
+        await message.answer(
+            f"⚠️ Ticker *{ticker}* não encontrado na sua carteira.\n"
+            f"Registre a compra primeiro com `/compra {ticker} quantidade preço`",
+            parse_mode="Markdown"
+        )
+        return
+
+    await message.answer(
+        f"💵 *Dividendo registrado!*\n\n"
+        f"📌 Ticker: {result['ticker']}\n"
+        f"🔢 Quantidade: {result['quantity']:.0f} ações\n"
+        f"💰 Valor por ação: R$ {result['value_per_share']:.2f}\n"
+        f"💵 Total recebido: R$ {result['total_dividend']:.2f}\n"
+        f"📈 Dividendos acumulados: R$ {result['accumulated_dividends']:.2f}",
+        parse_mode="Markdown"
+    )
+
+
+# /rendimento
+@router.message(Command("rendimento"), IsAllowedUser())
+async def handle_fixed_income(message: Message) -> None:
+    if not message.text:
+        return
+
+    parts = message.text.strip().split()
+
+    # Validating format
+    if len(parts) != 2:
+        await message.answer(
+            "⚠️ Formato inválido.\n"
+            "Use: `/rendimento valor`\n"
+            "Exemplo: `/rendimento 45,30`",
+            parse_mode="Markdown"
+        )
+        return
+
+    # Validating value
+    try:
+        value = parse_value(parts[1])
+    except ValueError:
+        await message.answer("⚠️ Valor precisa ser um número.\nExemplo: `/rendimento 45,30`")
+        return
+
+    result = register_fixed_income(value)
+
+    status = "🔄 *Rendimento atualizado!*" if result["updated"] else "✅ *Rendimento registrado!*"
+
+    await message.answer(
+        f"{status}\n\n"
+        f"📅 Mês: {result['mes']}\n"
+        f"💰 Rendimento: R$ {result['rendimento']:.2f}\n"
+        f"📈 Total acumulado: R$ {result['total_acumulado']:.2f}",
+        parse_mode="Markdown"
+    )
+
+
+# /carteira
+@router.message(Command("carteira"), IsAllowedUser())
+async def handle_portfolio(message: Message) -> None:
+    """Shows current investment portfolio."""
+    summary = get_investments_summary()
+
+    if not summary:
+        await message.answer("⚠️ Erro ao buscar dados de investimentos.")
+        return
+
+    # Building stocks text
+    if summary["stocks"]:
+        stocks_text = "\n".join(
+            f"  📌 *{r['Ticker']}* — {r['Quantidade']:.0f} ações | "
+            f"PM: R$ {float(r['Preço Médio']):.2f} | "
+            f"Div: R$ {float(r['Total Dividendos']):.2f}"
+            for r in summary["stocks"]
+        )
+    else:
+        stocks_text = "  Nenhuma ação registrada ainda."
+
+    await message.answer(
+        f"📊 *Carteira de Investimentos*\n\n"
+        f"📈 *Ações:*\n{stocks_text}\n\n"
+        f"💵 Total investido em ações: R$ {summary['total_invested_stocks']:.2f}\n"
+        f"🎁 Total em dividendos: R$ {summary['total_dividends']:.2f}\n\n"
+        f"🏦 *Renda Fixa:*\n"
+        f"  Total acumulado: R$ {summary['total_fixed']:.2f}\n"
+        f"  Último rendimento: R$ {summary['last_yield']:.2f}",
+        parse_mode="Markdown"
+    )
 
 # Free expense handler
 @router.message(IsAllowedUser())

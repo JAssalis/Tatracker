@@ -25,6 +25,10 @@ async def main() -> None:
         BotCommand(command="resumo", description="Ver resumo do mês"),
         BotCommand(command="parcelar", description="Registrar compra parcelada"),
         BotCommand(command="ajuda", description="Ver como usar o bot"),
+        BotCommand(command="carteira", description="Ver carteira de investimentos"),
+        BotCommand(command="compra", description="Registrar compra de ação"),
+        BotCommand(command="dividendo", description="Registrar dividendo recebido"),
+        BotCommand(command="rendimento", description="Registrar rendimento renda fixa"),
     ])
 
     logging.info("Bot iniciado! Aguardando mensagens...")
