@@ -4,7 +4,7 @@ import os
 TELEGRAM_TOKEN: str = os.getenv("TELEGRAM_TOKEN", "")
 
 SPREADSHEET_ID: str = os.getenv("SPREADSHEET_ID", "")
-CREDEDENTIALS_FILE: str = "credentials.json"
+CREDENTIALS_FILE: str = "credentials.json"
 
 # Safety measures
 ALLOWED_CHAT_ID: int = int(os.getenv("ALLOWED_CHAT_ID", "0"))
