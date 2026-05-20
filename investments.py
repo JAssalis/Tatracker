@@ -122,20 +122,15 @@ def register_dividend(ticker: str, value_per_share: float) -> dict:
 
 
 def register_fixed_income(rendimento: float) -> dict:
-    """
-    Registers monthly fixed income yield.
-    Returns updated fixed income data.
-    """
+    """Registers monthly fixed income yield."""
     worksheet = get_fixed_income_worksheet()
     records = worksheet.get_all_records()
     mes_atual = datetime.now(BRAZIL_TZ).strftime("%Y-%m")
 
-    # Check if current month already exists
     for i, row in enumerate(records):
         if str(row["Mês"]) == mes_atual:
-            old_rendimento = float(row["Rendimento"])
-            new_rendimento = round(old_rendimento + rendimento, 2)
             aporte = float(row["Aporte"])
+            new_rendimento = round(float(row["Rendimento"]) + rendimento, 2)
             total = round(aporte + new_rendimento, 2)
 
             row_index = i + 2
@@ -148,12 +143,8 @@ def register_fixed_income(rendimento: float) -> dict:
                 "updated": True
             }
 
-    # New month — calculate accumulated total
-    last_total = 0.0
-    if records:
-        last_total = float(records[-1]["Total Acumulado"])
-
-    new_total = round(last_total + rendimento, 2)
+    # New month
+    new_total = round(rendimento, 2)
     worksheet.append_row([mes_atual, 0, rendimento, new_total])
 
     return {
@@ -199,32 +190,26 @@ def register_fixed_income_deposit(value: float) -> dict:
 
     for i, row in enumerate(records):
         if str(row["Mês"]) == mes_atual:
-            old_aporte = float(row["Aporte"])
-            new_aporte = round(old_aporte + value, 2)
+            new_aporte = round(float(row["Aporte"]) + value, 2)
             rendimento = float(row["Rendimento"])
-            new_total = round(new_aporte + rendimento, 2)
+            total = round(new_aporte + rendimento, 2)
 
             row_index = i + 2
-            worksheet.update(f"B{row_index}:D{row_index}", [[new_aporte, rendimento, new_total]])
+            worksheet.update(f"B{row_index}:D{row_index}", [[new_aporte, rendimento, total]])
 
             return {
                 "mes": mes_atual,
                 "aporte": new_aporte,
-                "total_acumulado": new_total,
+                "total_acumulado": total,
                 "updated": True
             }
 
     # New month
-    last_total = 0.0
-    if records:
-        last_total = float(records[-1]["Total Acumulado"])
-
-    new_total = round(last_total + value, 2)
-    worksheet.append_row([mes_atual, value, 0, new_total])
+    worksheet.append_row([mes_atual, value, 0, value])
 
     return {
         "mes": mes_atual,
         "aporte": value,
-        "total_acumulado": new_total,
+        "total_acumulado": value,
         "updated": False
     }
