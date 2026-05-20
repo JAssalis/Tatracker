@@ -135,7 +135,8 @@ def register_fixed_income(rendimento: float) -> dict:
         if str(row["Mês"]) == mes_atual:
             old_rendimento = float(row["Rendimento"])
             new_rendimento = round(old_rendimento + rendimento, 2)
-            total = round(float(row["Total Acumulado"]) - old_rendimento + new_rendimento, 2)
+            aporte = float(row["Aporte"])
+            total = round(aporte + new_rendimento, 2)
 
             row_index = i + 2
             worksheet.update(f"C{row_index}:D{row_index}", [[new_rendimento, total]])
