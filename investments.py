@@ -128,7 +128,7 @@ def register_fixed_income(rendimento: float) -> dict:
     mes_atual = datetime.now(BRAZIL_TZ).strftime("%Y-%m")
 
     for i, row in enumerate(records):
-        if str(row["Mês"]) == mes_atual:
+        if str(row["Mês"]).strip().strip("'") == mes_atual:
             aporte = float(row["Aporte"])
             new_rendimento = round(float(row["Rendimento"]) + rendimento, 2)
             total = round(aporte + new_rendimento, 2)
