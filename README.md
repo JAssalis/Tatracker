@@ -1,4 +1,4 @@
-# TaTrácker
+# TatáTracker
 
 A personal finance Telegram bot that logs expenses and investments to Google Sheets.
 
@@ -8,10 +8,10 @@ A personal finance Telegram bot that logs expenses and investments to Google She
 - Log investments with the same format using `Investimentos` as category
 - Register installment purchases split across future months
 - Track stock purchases with automatic average price calculation
-- Track dividends and fixed income yields
+- Track dividends and fixed income yields including monthly deposits
 - Monthly spending goal with percentage tracking
 - Fuzzy category matching to handle typos
-- Auto-updating dashboard via Google Apps Script
+- Auto-updating dashboard with charts via Google Apps Script
 
 ## Commands
 
@@ -21,6 +21,7 @@ A personal finance Telegram bot that logs expenses and investments to Google She
 | `/parcelar value installments category` | Log installment purchase | `/parcelar 300 3 Electronics` |
 | `/compra ticker quantity price` | Log stock purchase | `/compra BBAS3 3 19.50` |
 | `/dividendo ticker value` | Log dividend received | `/dividendo BBAS3 0.30` |
+| `/aporte value` | Log fixed income deposit | `/aporte 1000` |
 | `/rendimento value` | Log fixed income yield | `/rendimento 45.30` |
 | `/carteira` | View investment portfolio | |
 | `/resumo` | View monthly spending summary | |
@@ -32,7 +33,7 @@ A personal finance Telegram bot that logs expenses and investments to Google She
 - aiogram 3.x
 - gspread + oauth2client
 - Google Sheets as database
-- Railway for hosting
+- Google Apps Script for dashboards
 
 ## Project Structure
 ```
@@ -46,7 +47,7 @@ A personal finance Telegram bot that logs expenses and investments to Google She
 └── requirements.txt
 ```
 
-
+## Environment Variables
 
 ## Environment Variables
 
