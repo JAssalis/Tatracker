@@ -9,6 +9,10 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 from config import CREDENTIALS_FILE, SPREADSHEET_ID
 
+def parse_float(value) -> float:
+    """Converts string to float handling BR decimal separator."""
+    return float(str(value).replace(",", ".")) if value else 0.0
+
 # Timezone
 BRAZIL_TZ = pytz.timezone("America/Sao_Paulo")
 
@@ -133,8 +137,8 @@ def register_fixed_income_deposit(value: float) -> dict:
         if i == 0:
             continue  # Skip header
         if row[0].strip().strip("'") == mes_atual:
-            old_aporte = float(row[1]) if row[1] else 0.0
-            rendimento = float(row[2]) if row[2] else 0.0
+            old_aporte = parse_float(row[1])
+            rendimento = parse_float(row[2])
             new_aporte = round(old_aporte + value, 2)
             total = round(new_aporte + rendimento, 2)
 
@@ -198,8 +202,8 @@ def register_fixed_income(rendimento: float) -> dict:
         if i == 0:
             continue  # Skip header
         if row[0].strip().strip("'") == mes_atual:
-            aporte = float(row[1]) if row[1] else 0.0
-            old_rendimento = float(row[2]) if row[2] else 0.0
+            aporte = parse_float(row[1])
+            old_rendimento = parse_float(row[2])
             new_rendimento = round(old_rendimento + rendimento, 2)
             total = round(aporte + new_rendimento, 2)
 
