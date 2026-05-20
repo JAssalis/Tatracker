@@ -121,36 +121,40 @@ def register_dividend(ticker: str, value_per_share: float) -> dict:
     return None
 
 
-def register_fixed_income(rendimento: float) -> dict:
-    """Registers monthly fixed income yield."""
+def register_fixed_income_deposit(value: float) -> dict:
+    """Registers a fixed income deposit for the current month."""
     worksheet = get_fixed_income_worksheet()
-    records = worksheet.get_all_records()
     mes_atual = datetime.now(BRAZIL_TZ).strftime("%Y-%m")
 
-    for i, row in enumerate(records):
-        if str(row["Mês"]).strip().strip("'") == mes_atual:
-            aporte = float(row["Aporte"])
-            new_rendimento = round(float(row["Rendimento"]) + rendimento, 2)
-            total = round(aporte + new_rendimento, 2)
+    # Read all values directly (not as records)
+    all_values = worksheet.get_all_values()
 
-            row_index = i + 2
-            worksheet.update(f"C{row_index}:D{row_index}", [[new_rendimento, total]])
+    for i, row in enumerate(all_values):
+        if i == 0:
+            continue  # Skip header
+        if row[0].strip().strip("'") == mes_atual:
+            old_aporte = float(row[1]) if row[1] else 0.0
+            rendimento = float(row[2]) if row[2] else 0.0
+            new_aporte = round(old_aporte + value, 2)
+            total = round(new_aporte + rendimento, 2)
+
+            row_index = i + 1
+            worksheet.update(f"B{row_index}:D{row_index}", [[new_aporte, rendimento, total]])
 
             return {
                 "mes": mes_atual,
-                "rendimento": new_rendimento,
+                "aporte": new_aporte,
                 "total_acumulado": total,
                 "updated": True
             }
 
     # New month
-    new_total = round(rendimento, 2)
-    worksheet.append_row([mes_atual, 0, rendimento, new_total])
+    worksheet.append_row([mes_atual, value, 0, value])
 
     return {
         "mes": mes_atual,
-        "rendimento": rendimento,
-        "total_acumulado": new_total,
+        "aporte": value,
+        "total_acumulado": value,
         "updated": False
     }
 
@@ -182,34 +186,39 @@ def get_investments_summary() -> dict:
         logging.error(f"Error fetching investments summary: {e}")
         return None
 
-def register_fixed_income_deposit(value: float) -> dict:
-    """Registers a fixed income deposit for the current month."""
+def register_fixed_income(rendimento: float) -> dict:
+    """Registers monthly fixed income yield."""
     worksheet = get_fixed_income_worksheet()
-    records = worksheet.get_all_records()
     mes_atual = datetime.now(BRAZIL_TZ).strftime("%Y-%m")
 
-    for i, row in enumerate(records):
-        if str(row["Mês"]) == mes_atual:
-            new_aporte = round(float(row["Aporte"]) + value, 2)
-            rendimento = float(row["Rendimento"])
-            total = round(new_aporte + rendimento, 2)
+    # Read all values directly (not as records)
+    all_values = worksheet.get_all_values()
 
-            row_index = i + 2
-            worksheet.update(f"B{row_index}:D{row_index}", [[new_aporte, rendimento, total]])
+    for i, row in enumerate(all_values):
+        if i == 0:
+            continue  # Skip header
+        if row[0].strip().strip("'") == mes_atual:
+            aporte = float(row[1]) if row[1] else 0.0
+            old_rendimento = float(row[2]) if row[2] else 0.0
+            new_rendimento = round(old_rendimento + rendimento, 2)
+            total = round(aporte + new_rendimento, 2)
+
+            row_index = i + 1
+            worksheet.update(f"C{row_index}:D{row_index}", [[new_rendimento, total]])
 
             return {
                 "mes": mes_atual,
-                "aporte": new_aporte,
+                "rendimento": new_rendimento,
                 "total_acumulado": total,
                 "updated": True
             }
 
     # New month
-    worksheet.append_row([mes_atual, value, 0, value])
+    worksheet.append_row([mes_atual, 0, rendimento, rendimento])
 
     return {
         "mes": mes_atual,
-        "aporte": value,
-        "total_acumulado": value,
+        "rendimento": rendimento,
+        "total_acumulado": rendimento,
         "updated": False
     }
