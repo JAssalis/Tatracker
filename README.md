@@ -1,4 +1,4 @@
-# GiovaninhaBot
+# Tatrácker
 
 A personal finance Telegram bot that logs expenses and investments to Google Sheets.
 
