@@ -6,7 +6,7 @@ from filters import IsAllowedUser
 from categories import normalize_category
 from sheet import save_expense, get_monthly_expenses, get_monthly_goal, get_summary, get_known_categories, save_installments
 
-from investments import buy_stock, register_dividend, register_fixed_income, get_investments_summary
+from investments import buy_stock, register_dividend, register_fixed_income, register_fixed_income_deposit, get_investments_summary
 
 router = Router()
 
@@ -309,6 +309,43 @@ async def handle_portfolio(message: Message) -> None:
         f"🏦 *Renda Fixa:*\n"
         f"  Total acumulado: R$ {summary['total_fixed']:.2f}\n"
         f"  Último rendimento: R$ {summary['last_yield']:.2f}",
+        parse_mode="Markdown"
+    )
+
+# /aporte
+@router.message(Command("aporte"), IsAllowedUser())
+async def handle_deposit(message: Message) -> None:
+    if not message.text:
+        return
+
+    parts = message.text.strip().split()
+
+    # Validating format
+    if len(parts) != 2:
+        await message.answer(
+            "⚠️ Formato inválido.\n"
+            "Use: `/aporte valor`\n"
+            "Exemplo: `/aporte 1000`",
+            parse_mode="Markdown"
+        )
+        return
+
+    # Validating value
+    try:
+        value = parse_value(parts[1])
+    except ValueError:
+        await message.answer("⚠️ Valor precisa ser um número.\nExemplo: `/aporte 1000`")
+        return
+
+    result = register_fixed_income_deposit(value)
+
+    status = "🔄 *Aporte atualizado!*" if result["updated"] else "✅ *Aporte registrado!*"
+
+    await message.answer(
+        f"{status}\n\n"
+        f"📅 Mês: {result['mes']}\n"
+        f"💰 Total aportado: R$ {result['aporte']:.2f}\n"
+        f"📈 Total acumulado: R$ {result['total_acumulado']:.2f}",
         parse_mode="Markdown"
     )
 

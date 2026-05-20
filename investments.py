@@ -189,3 +189,41 @@ def get_investments_summary() -> dict:
     except Exception as e:
         logging.error(f"Error fetching investments summary: {e}")
         return None
+
+def register_fixed_income_deposit(value: float) -> dict:
+    """Registers a fixed income deposit for the current month."""
+    worksheet = get_fixed_income_worksheet()
+    records = worksheet.get_all_records()
+    mes_atual = datetime.now(BRAZIL_TZ).strftime("%Y-%m")
+
+    for i, row in enumerate(records):
+        if str(row["Mês"]) == mes_atual:
+            old_aporte = float(row["Aporte"])
+            new_aporte = round(old_aporte + value, 2)
+            rendimento = float(row["Rendimento"])
+            new_total = round(new_aporte + rendimento, 2)
+
+            row_index = i + 2
+            worksheet.update(f"B{row_index}:D{row_index}", [[new_aporte, rendimento, new_total]])
+
+            return {
+                "mes": mes_atual,
+                "aporte": new_aporte,
+                "total_acumulado": new_total,
+                "updated": True
+            }
+
+    # New month
+    last_total = 0.0
+    if records:
+        last_total = float(records[-1]["Total Acumulado"])
+
+    new_total = round(last_total + value, 2)
+    worksheet.append_row([mes_atual, value, 0, new_total])
+
+    return {
+        "mes": mes_atual,
+        "aporte": value,
+        "total_acumulado": new_total,
+        "updated": False
+    }
