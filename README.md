@@ -35,14 +35,17 @@ A personal finance Telegram bot that logs expenses and investments to Google She
 - Railway for hosting
 
 ## Project Structure
-├── main.py          # Entry point
-├── config.py        # Environment variables
-├── handlers.py      # Telegram message handlers
-├── filters.py       # Security filters
-├── sheet.py         # Google Sheets integration
-├── investments.py   # Investment logic
-├── categories.py    # Fuzzy category matching
+```
+├── main.py           # Entry point
+├── config.py         # Environment variables
+├── handlers.py       # Telegram message handlers
+├── filters.py        # Security filters
+├── sheet.py          # Google Sheets integration
+├── investments.py    # Investment logic
+├── categories.py     # Fuzzy category matching
 └── requirements.txt
+```
+
 
 
 ## Environment Variables
