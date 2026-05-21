@@ -295,8 +295,8 @@ async def handle_portfolio(message: Message) -> None:
     if summary["stocks"]:
         stocks_text = "\n".join(
             f"  📌 *{r['Ticker']}* — {r['Quantidade']:.0f} ações | "
-            f"PM: R$ {parse_float(r['Preço Médio']):.2f} | "
-            f"Div: R$ {parse_float(r['Total Dividendos']):.2f}"
+            f"PM: R$ {r['Preço Médio']:.2f} | "
+            f"Div: R$ {r['Total Dividendos']:.2f}"
             for r in summary["stocks"]
         )
     else:

@@ -49,28 +49,23 @@ def get_fixed_income_worksheet() -> gspread.Worksheet:
 
 
 def buy_stock(ticker: str, quantity: int, price: float) -> dict:
-    """
-    Registers a stock purchase and recalculates average price.
-    Returns updated position data.
-    """
+    """Registers a stock purchase and recalculates average price."""
     worksheet = get_stocks_worksheet()
-    records = worksheet.get_all_records()
+    all_values = worksheet.get_all_values()
     ticker = ticker.upper()
 
-    # Check if ticker already exists
-    for i, row in enumerate(records):
-        if row["Ticker"].upper() == ticker:
-            # Recalculate average price
-            old_qty = float(row["Quantidade"])
-            old_avg = float(row["Preço Médio"])
-            old_total = float(row["Total Investido"])
+    for i, row in enumerate(all_values):
+        if i == 0:
+            continue  # Skip header
+        if row[0].upper() == ticker:
+            old_qty = parse_float(row[1])
+            old_total = parse_float(row[3])
 
             new_qty = old_qty + quantity
             new_total = old_total + (quantity * price)
             new_avg = new_total / new_qty
 
-            # Update row (i+2 because row 1 is header and gspread is 1-indexed)
-            row_index = i + 2
+            row_index = i + 1
             worksheet.update(f"B{row_index}:D{row_index}", [[new_qty, round(new_avg, 2), round(new_total, 2)]])
 
             return {
@@ -81,7 +76,7 @@ def buy_stock(ticker: str, quantity: int, price: float) -> dict:
                 "is_new": False
             }
 
-    # New ticker — append row
+    # New ticker
     total_invested = quantity * price
     worksheet.append_row([ticker, quantity, price, round(total_invested, 2), 0])
 
@@ -93,25 +88,22 @@ def buy_stock(ticker: str, quantity: int, price: float) -> dict:
         "is_new": True
     }
 
-
 def register_dividend(ticker: str, value_per_share: float) -> dict:
-    """
-    Registers dividends received for a ticker.
-    Returns total dividend amount.
-    """
+    """Registers dividends received for a ticker."""
     worksheet = get_stocks_worksheet()
-    records = worksheet.get_all_records()
+    all_values = worksheet.get_all_values()
     ticker = ticker.upper()
 
-    for i, row in enumerate(records):
-        if row["Ticker"].upper() == ticker:
-            quantity = float(row["Quantidade"])
+    for i, row in enumerate(all_values):
+        if i == 0:
+            continue  # Skip header
+        if row[0].upper() == ticker:
+            quantity = parse_float(row[1])
             total_dividend = round(quantity * value_per_share, 2)
-            old_dividends = float(row["Total Dividendos"])
+            old_dividends = parse_float(row[4])
             new_dividends = round(old_dividends + total_dividend, 2)
 
-            # Update dividends column (E)
-            row_index = i + 2
+            row_index = i + 1
             worksheet.update(f"E{row_index}", [[new_dividends]])
 
             return {
@@ -123,7 +115,6 @@ def register_dividend(ticker: str, value_per_share: float) -> dict:
             }
 
     return None
-
 
 def register_fixed_income_deposit(value: float) -> dict:
     """Registers a fixed income deposit for the current month."""
@@ -168,10 +159,30 @@ def get_investments_summary() -> dict:
     try:
         # Stocks
         stocks_ws = get_stocks_worksheet()
-        stocks = stocks_ws.get_all_records()
+        all_values = stocks_ws.get_all_values()
+        stocks = []
+        total_invested_stocks = 0.0
+        total_dividends = 0.0
 
-        total_invested_stocks = sum(parse_float(r["Total Investido"]) for r in stocks)
-        total_dividends = sum(parse_float(r["Total Dividendos"]) for r in stocks)
+        for i, row in enumerate(all_values):
+            if i == 0:
+                continue
+            if not row[0]:
+                continue
+            ticker = row[0]
+            quantidade = parse_float(row[1])
+            preco_medio = parse_float(row[2])
+            total_investido = parse_float(row[3])
+            dividendos = parse_float(row[4])
+            stocks.append({
+                "Ticker": ticker,
+                "Quantidade": quantidade,
+                "Preço Médio": preco_medio,
+                "Total Investido": total_investido,
+                "Total Dividendos": dividendos
+            })
+            total_invested_stocks += total_investido
+            total_dividends += dividendos
 
         # Fixed income
         fixed_ws = get_fixed_income_worksheet()
