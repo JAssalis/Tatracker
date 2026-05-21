@@ -170,14 +170,18 @@ def get_investments_summary() -> dict:
         stocks_ws = get_stocks_worksheet()
         stocks = stocks_ws.get_all_records()
 
-        total_invested_stocks = sum(float(r["Total Investido"]) for r in stocks)
-        total_dividends = sum(float(r["Total Dividendos"]) for r in stocks)
+        total_invested_stocks = sum(parse_float(r["Total Investido"]) for r in stocks)
+        total_dividends = sum(parse_float(r["Total Dividendos"]) for r in stocks)
 
         # Fixed income
         fixed_ws = get_fixed_income_worksheet()
-        fixed_records = fixed_ws.get_all_records()
-        total_fixed = float(fixed_records[-1]["Total Acumulado"]) if fixed_records else 0.0
-        last_yield = float(fixed_records[-1]["Rendimento"]) if fixed_records else 0.0
+        fixed_values = fixed_ws.get_all_values()
+        total_fixed = 0.0
+        last_yield = 0.0
+        if len(fixed_values) > 1:
+            last_row = fixed_values[-1]
+            total_fixed = parse_float(last_row[3])
+            last_yield = parse_float(last_row[2])
 
         return {
             "stocks": stocks,

@@ -6,7 +6,8 @@ from filters import IsAllowedUser
 from categories import normalize_category
 from sheet import save_expense, get_monthly_expenses, get_monthly_goal, get_summary, get_known_categories, save_installments
 
-from investments import buy_stock, register_dividend, register_fixed_income, register_fixed_income_deposit, get_investments_summary
+from investments import buy_stock, register_dividend, register_fixed_income, register_fixed_income_deposit, get_investments_summary, parse_float
+
 
 router = Router()
 
@@ -294,8 +295,8 @@ async def handle_portfolio(message: Message) -> None:
     if summary["stocks"]:
         stocks_text = "\n".join(
             f"  📌 *{r['Ticker']}* — {r['Quantidade']:.0f} ações | "
-            f"PM: R$ {float(r['Preço Médio']):.2f} | "
-            f"Div: R$ {float(r['Total Dividendos']):.2f}"
+            f"PM: R$ {parse_float(r['Preço Médio']):.2f} | "
+            f"Div: R$ {parse_float(r['Total Dividendos']):.2f}"
             for r in summary["stocks"]
         )
     else:
