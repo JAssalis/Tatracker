@@ -8,23 +8,26 @@ import logging
 from config import CREDENTIALS_FILE, SPREADSHEET_ID, INVESTMENT_CATEGORY, MONTHLY_GOAL
 
 BRAZIL_TZ = pytz.timezone("America/Sao_Paulo")
-# Permissons 
 
 SCOPES = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive",
 ]
 
-# Creating the worksheet
+
+def parse_float(value) -> float:
+    """Converts string to float handling BR decimal separator."""
+    return float(str(value).replace(",", ".")) if value else 0.0
+
+
 def get_worksheet():
+    """Authenticates and returns the current month worksheet."""
     google_credentials = os.getenv("GOOGLE_CREDENTIALS")
 
     if google_credentials:
-        # Railway — lê as credenciais da variável de ambiente
         creds_dict = json.loads(google_credentials)
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPES)
     else:
-        # Codespace — lê do arquivo local
         creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, SCOPES)
 
     client = gspread.authorize(creds)
@@ -39,23 +42,25 @@ def get_worksheet():
 
     return worksheet
 
+
 def save_expense(value: float, category: str) -> None:
+    """Saves an expense or investment to the spreadsheet."""
     worksheet = get_worksheet()
     now = datetime.now(BRAZIL_TZ)
     logging.info(f"DEBUG categoria: '{category}' | INVESTMENT_CATEGORY: '{INVESTMENT_CATEGORY}'")
     tipo = "Investimento" if category.lower() == INVESTMENT_CATEGORY.lower() else "Gasto"
 
     row = [
-        now.strftime("%d/%m/%Y"),  # Date
-        now.strftime("%H:%M"),     # Hour
-        value,                     # Value earned / spend
-        category.capitalize(),     # Category
-        tipo,                      # Investment or spent
+        now.strftime("%d/%m/%Y"),
+        now.strftime("%H:%M"),
+        value,
+        category.capitalize(),
+        tipo,
     ]
 
     worksheet.append_row(row)
 
-# Returns all costs from the month (withouth investments)
+
 def get_monthly_expenses() -> float:
     """Returns total expenses for the current month (excludes investments)."""
     worksheet = get_worksheet()
@@ -64,21 +69,23 @@ def get_monthly_expenses() -> float:
     total = 0.0
     for i, row in enumerate(records):
         if i == 0:
-            continue  # Skip header
+            continue
         if row[4] == "Gasto":
             try:
-                total += float(str(row[2]).replace(",", "."))
+                total += parse_float(row[2])
             except ValueError:
                 continue
 
     return total
 
-def get_monthly_goal() -> float:
-    try:
-        creds_dict_str = os.getenv("GOOGLE_CREDENTIALS")
 
-        if creds_dict_str:
-            creds_dict = json.loads(creds_dict_str)
+def get_monthly_goal() -> float:
+    """Reads monthly goal from config sheet."""
+    try:
+        google_credentials = os.getenv("GOOGLE_CREDENTIALS")
+
+        if google_credentials:
+            creds_dict = json.loads(google_credentials)
             creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPES)
         else:
             creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, SCOPES)
@@ -86,30 +93,37 @@ def get_monthly_goal() -> float:
         client = gspread.authorize(creds)
         spreadsheet = client.open_by_key(SPREADSHEET_ID)
         config_sheet = spreadsheet.worksheet("config")
-        records = config_sheet.get_all_records()
+        all_values = config_sheet.get_all_values()
 
-        for row in records:
-            if str(row["Chave"]).lower() == "monthly_goal":
-                return float(row["Valor"])
+        for row in all_values[1:]:
+            if str(row[0]).lower() == "monthly_goal":
+                return parse_float(row[1])
 
     except Exception as e:
-        logging.warning(f"Erro ao ler meta da planilha: {e}. Usando valor padrão.")
+        logging.warning(f"Error reading goal from spreadsheet: {e}. Using default.")
 
     return MONTHLY_GOAL
 
+
 def get_summary() -> dict:
+    """Returns a summary dict of current month expenses."""
     worksheet = get_worksheet()
-    records = worksheet.get_all_records()
+    all_values = worksheet.get_all_values()
 
     meta = get_monthly_goal()
     categorias = {}
     total_gastos = 0.0
     total_investimentos = 0.0
 
-    for row in records:
-        valor = float(row["Valor"])
-        categoria = row["Categoria"]
-        tipo = row["Tipo"]
+    for i, row in enumerate(all_values):
+        if i == 0:
+            continue
+        if len(row) < 5:
+            continue
+
+        valor = parse_float(row[2])
+        categoria = row[3]
+        tipo = row[4]
 
         if tipo == "Gasto":
             total_gastos += valor
@@ -117,11 +131,10 @@ def get_summary() -> dict:
         elif tipo == "Investimento":
             total_investimentos += valor
 
-    # Ordena categorias por valor
     ranking = sorted(categorias.items(), key=lambda x: x[1], reverse=True)
     ranking_texto = "\n".join(
         f"  {i+1}. {cat}: R$ {val:.2f}"
-        for i, (cat, val) in enumerate(ranking[:5])  # top 5
+        for i, (cat, val) in enumerate(ranking[:5])
     )
 
     percentual = (total_gastos / meta * 100) if meta > 0 else 0
@@ -138,17 +151,20 @@ def get_summary() -> dict:
         "ranking": ranking_texto if ranking_texto else "Nenhum gasto registrado ainda."
     }
 
+
 def get_known_categories() -> list[str]:
+    """Returns list of categories already used in the current month."""
     try:
         worksheet = get_worksheet()
-        records = worksheet.get_all_records()
-        categories = list(set(row["Categoria"] for row in records if row["Categoria"]))
+        all_values = worksheet.get_all_values()
+        categories = list(set(row[3] for row in all_values[1:] if len(row) > 3 and row[3]))
         return categories
     except Exception:
         return []
 
 
 def save_installments(value: float, category: str, installments: int) -> list[str]:
+    """Saves installment purchases across future months."""
     from dateutil.relativedelta import relativedelta
 
     installment_value = round(value / installments, 2)
@@ -163,7 +179,6 @@ def save_installments(value: float, category: str, installments: int) -> list[st
 
     client = gspread.authorize(creds)
     spreadsheet = client.open_by_key(SPREADSHEET_ID)
-
     now = datetime.now(BRAZIL_TZ)
 
     for i in range(installments):
