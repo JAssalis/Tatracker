@@ -57,14 +57,19 @@ def save_expense(value: float, category: str) -> None:
 
 # Returns all costs from the month (withouth investments)
 def get_monthly_expenses() -> float:
+    """Returns total expenses for the current month (excludes investments)."""
     worksheet = get_worksheet()
-    records = worksheet.get_all_records()
+    records = worksheet.get_all_values()
 
-    total = sum(
-        float(row["Valor"])
-        for row in records
-        if row["Tipo"] == "Gasto"
-    )
+    total = 0.0
+    for i, row in enumerate(records):
+        if i == 0:
+            continue  # Skip header
+        if row[4] == "Gasto":
+            try:
+                total += float(str(row[2]).replace(",", "."))
+            except ValueError:
+                continue
 
     return total
 
