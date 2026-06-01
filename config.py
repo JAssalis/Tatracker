@@ -13,8 +13,8 @@ ALLOWED_CHAT_ID: int = int(os.getenv("ALLOWED_CHAT_ID", "0"))
 MONTHLY_GOAL: float = float(os.getenv("MONTHLY_GOAL", "600"))
 
 # Investiment category: doesn't affects the monthly budget
-INVESTMENT_CATEGORY: str = "Investmentos"
-
+INVESTMENT_CATEGORY: str = "Investimentos"
+grep -n "def register_fixed_income" investments.py
 # Confirming all variables
 def validate_config() -> None:
     missing = []

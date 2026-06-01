@@ -116,38 +116,40 @@ def register_dividend(ticker: str, value_per_share: float) -> dict:
 
     return None
 
-def register_fixed_income_deposit(value: float) -> dict:
-    """Registers a fixed income deposit for the current month."""
+def register_fixed_income_deposit(value: float, asset: str) -> dict:
+    """Registers a fixed income deposit for the current month and asset."""
     worksheet = get_fixed_income_worksheet()
     mes_atual = datetime.now(BRAZIL_TZ).strftime("%Y-%m")
+    asset = asset.strip().title()
 
-    # Read all values directly (not as records)
     all_values = worksheet.get_all_values()
 
     for i, row in enumerate(all_values):
         if i == 0:
-            continue  # Skip header
-        if row[0].strip().strip("'") == mes_atual:
-            old_aporte = parse_float(row[1])
-            rendimento = parse_float(row[2])
+            continue
+        if row[0].strip() == mes_atual and row[1].strip().lower() == asset.lower():
+            old_aporte = parse_float(row[2])
+            rendimento = parse_float(row[3])
             new_aporte = round(old_aporte + value, 2)
             total = round(new_aporte + rendimento, 2)
 
             row_index = i + 1
-            worksheet.update(f"B{row_index}:D{row_index}", [[new_aporte, rendimento, total]])
+            worksheet.update(f"C{row_index}:E{row_index}", [[new_aporte, rendimento, total]])
 
             return {
                 "mes": mes_atual,
+                "asset": asset,
                 "aporte": new_aporte,
                 "total_acumulado": total,
                 "updated": True
             }
 
-    # New month
-    worksheet.append_row([mes_atual, value, 0, value])
+    # New month or new asset
+    worksheet.append_row([mes_atual, asset, value, 0, value])
 
     return {
         "mes": mes_atual,
+        "asset": asset,
         "aporte": value,
         "total_acumulado": value,
         "updated": False
@@ -205,38 +207,40 @@ def get_investments_summary() -> dict:
         logging.error(f"Error fetching investments summary: {e}")
         return None
 
-def register_fixed_income(rendimento: float) -> dict:
-    """Registers monthly fixed income yield."""
+def register_fixed_income(rendimento: float, asset: str) -> dict:
+    """Registers monthly fixed income yield for a specific asset."""
     worksheet = get_fixed_income_worksheet()
     mes_atual = datetime.now(BRAZIL_TZ).strftime("%Y-%m")
+    asset = asset.strip().title()
 
-    # Read all values directly (not as records)
     all_values = worksheet.get_all_values()
 
     for i, row in enumerate(all_values):
         if i == 0:
-            continue  # Skip header
-        if row[0].strip().strip("'") == mes_atual:
-            aporte = parse_float(row[1])
-            old_rendimento = parse_float(row[2])
+            continue
+        if row[0].strip() == mes_atual and row[1].strip().lower() == asset.lower():
+            aporte = parse_float(row[2])
+            old_rendimento = parse_float(row[3])
             new_rendimento = round(old_rendimento + rendimento, 2)
             total = round(aporte + new_rendimento, 2)
 
             row_index = i + 1
-            worksheet.update(f"C{row_index}:D{row_index}", [[new_rendimento, total]])
+            worksheet.update(f"D{row_index}:E{row_index}", [[new_rendimento, total]])
 
             return {
                 "mes": mes_atual,
+                "asset": asset,
                 "rendimento": new_rendimento,
                 "total_acumulado": total,
                 "updated": True
             }
 
-    # New month
-    worksheet.append_row([mes_atual, 0, rendimento, rendimento])
+    # New month or new asset
+    worksheet.append_row([mes_atual, asset, 0, rendimento, rendimento])
 
     return {
         "mes": mes_atual,
+        "asset": asset,
         "rendimento": rendimento,
         "total_acumulado": rendimento,
         "updated": False
