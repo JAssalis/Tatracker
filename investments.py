@@ -159,7 +159,6 @@ def register_fixed_income_deposit(value: float, asset: str) -> dict:
 def get_investments_summary() -> dict:
     """Returns a summary of all investments."""
     try:
-        # Stocks
         stocks_ws = get_stocks_worksheet()
         all_values = stocks_ws.get_all_values()
         stocks = []
@@ -167,15 +166,15 @@ def get_investments_summary() -> dict:
         total_dividends = 0.0
 
         for i, row in enumerate(all_values):
-            if i == 0:
+            if i == 0 or not row[0]:
                 continue
-            if not row[0]:
-                continue
+            
             ticker = row[0]
             quantidade = parse_float(row[1])
             preco_medio = parse_float(row[2])
             total_investido = parse_float(row[3])
             dividendos = parse_float(row[4])
+            
             stocks.append({
                 "Ticker": ticker,
                 "Quantidade": quantidade,
@@ -186,11 +185,28 @@ def get_investments_summary() -> dict:
             total_invested_stocks += total_investido
             total_dividends += dividendos
 
-        # Fixed income
         fixed_ws = get_fixed_income_worksheet()
         fixed_values = fixed_ws.get_all_values()
+        fixed_assets = []
         total_fixed = 0.0
         last_yield = 0.0
+
+        for i, row in enumerate(fixed_values):
+            if i == 0 or not row[0]:
+                continue
+                
+            asset = row[0]
+            aporte = parse_float(row[1])
+            rendimento = parse_float(row[2])
+            total_acumulado = parse_float(row[3])
+            
+            fixed_assets.append({
+                "asset": asset,
+                "total_aporte": aporte,
+                "total_rendimento": rendimento,
+                "total_acumulado": total_acumulado
+            })
+
         if len(fixed_values) > 1:
             last_row = fixed_values[-1]
             total_fixed = parse_float(last_row[3])
@@ -200,10 +216,13 @@ def get_investments_summary() -> dict:
             "stocks": stocks,
             "total_invested_stocks": round(total_invested_stocks, 2),
             "total_dividends": round(total_dividends, 2),
+            "fixed_assets": fixed_assets,
             "total_fixed": round(total_fixed, 2),
             "last_yield": round(last_yield, 2),
         }
+        
     except Exception as e:
+        import logging
         logging.error(f"Error fetching investments summary: {e}")
         return None
 
